@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html xmlns = "http://www.w3.org/1999/xhtml">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>draw</title>
+		<style>
+			body {
+				margin: 0px;
+			}
+			#canvas {
+				width: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+
+		<script>
+		
+			function ListCirc() {
+				this._length = 0;
+				this.r = null;
+				this.p = null;
+this.marker = null;
+			}
+
+			function NodeCirc() {
+				this.d = 0;
+				this.i = null;
+				this.o = null;
+			}
+
+			// its a add before
+			ListCirc.prototype.add = function() {
+				var node = new NodeCirc();
+				if (this._length) {
+					node.i = this.p.i;
+					node.o = this.p;
+					node.i.o = node;
+					this.p.i = node;
+				} else {
+					node.i = node;
+					node.o = node;
+					this.r = node;
+this.marker = node;
+				}
+				this.p = node;
+				this._length++;
+			};
+
+			ListCirc.prototype.del = function() {
+				if (this._length == 1) {
+					this._length = 0;
+					this.p = null;
+					this.r = null;
+this.marker = null;
+				} else if (this._length > 1) {
+					this._length--;
+					this.p.i.o = this.p.o;
+					this.p.o.i = this.p.i;
+					if (this.p == this.r) {
+						this.r = this.p.i;
+					}
+					this.p = this.p.o;
+				}
+			};
+			
+			function Data3D() {
+				this.x = 0;
+				this.y = 0;
+				this.z = 0;
+			}
+			
+			ListCirc.prototype.birthHull = function() {
+				this.add();
+				this.p.d = new Data3D();
+				this.setHull();
+			};
+
+			ListCirc.prototype.setHull = function() {
+				this.p.d.x = Math.random() * canvas.width;
+				this.p.d.y = Math.random() * canvas.height;
+				this.p.d.z = (Math.random() - 0.5) * 2 * canvas.depth;
+			};
+
+			ListCirc.prototype.seedHull = function(a) {
+				do {
+					this.birthHull();
+				} while (--a);
+			};
+			
+			ListCirc.prototype.paintHull = function() {
+				ctx.beginPath();
+				this.p = this.r;
+				ctx.moveTo(Math.floor(this.p.d.x), Math.floor(this.p.d.y));
+				do {
+					this.p = this.p.i;
+					ctx.lineTo(Math.floor(this.p.d.x), Math.floor(this.p.d.y));
+				} while (this.p.i != this.r);
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = "black";
+				ctx.stroke();
+			};
+			
+			ListCirc.prototype.paintGroup = function() {
+				this.p = this.r;
+				do {
+					this.p.hull.paintHull();
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+			function HullA() {
+				this.ha = Math.floor(Math.random() * 2 * hullA + 2);
+			}
+			
+			ListCirc.prototype.setStyle = function() {
+				this.p.style.a = 0.004;
+			};
+
+			ListCirc.prototype.birthHullGroup = function() {
+				this.add();
+				this.p.hull = new ListCirc();
+				this.p.d = new HullA();
+				this.p.style = new Style();
+				this.setStyle();
+				this.p.life = new Life();
+				this.p.hull.seedHull(this.p.d.ha);
+			};			
+
+			ListCirc.prototype.seedHullGroup = function() {
+				do {
+					this.birthHullGroup();
+				} while (--this.d.ga);
+			};
+			
+			function Step() {
+				this.x = 0;
+				this.y = 0;
+				this.ux = 0;
+				this.uy = 0;
+				this.sx = 0;
+				this.sy = 0;
+			}
+			
+			ListCirc.prototype.birthStep = function() {
+				this.add();
+				this.p.d = new Step();
+			};
+			
+			ListCirc.prototype.seedStep = function(a) {
+				for (var i = 0; i < a; i++) {
+					this.birthStep();
+				}
+			};
+			
+			function StepA() {
+				this.sa = Math.floor(Math.random() * 2 * stepA + 1);
+			}
+			
+			ListCirc.prototype.birthStepGroup = function(hull) {
+				this.p.step = new ListCirc();
+				this.p.d = new StepA();
+				this.p.step.seedStep(hull._length - 1);			
+				this.p.step.p = this.p.step.r;
+				hull.p = hull.r;
+				do {
+					this.p.step.p.d.x = hull.p.d.x;
+					this.p.step.p.d.y = hull.p.d.y;
+					this.p.step.p.d.ux = (hull.p.i.d.x - hull.p.d.x) / this.p.d.sa;
+					this.p.step.p.d.uy = (hull.p.i.d.y - hull.p.d.y) / this.p.d.sa;
+					this.p.step.p = this.p.step.p.i;
+					hull.p = hull.p.i;
+				} while (this.p.step.p != this.p.step.r);
+			};
+			
+			ListCirc.prototype.seedStepGroup = function() {
+				this.p = this.r;
+				do {
+					this.birthStepGroup(this.p.hull);
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+			ListCirc.prototype.paintStep = function() {
+				this.p = this.r;
+				ctx.beginPath();
+				ctx.moveTo(Math.floor(this.p.d.sx), Math.floor(this.p.d.sy));
+				this.p.d.sx += this.p.d.ux;
+				this.p.d.sy += this.p.d.uy;
+				do {
+					this.p = this.p.i;
+					ctx.lineTo(Math.floor(this.p.d.sx), Math.floor(this.p.d.sy));
+					this.p.d.sx += this.p.d.ux;
+					this.p.d.sy += this.p.d.uy;
+				} while (this.p != this.r);
+				ctx.stroke();
+			};
+			
+			ListCirc.prototype.resetStep = function() {
+				this.p = this.r;
+				do {
+					this.p.d.sx = this.p.d.x;
+					this.p.d.sy = this.p.d.y;
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+//original idea: slow bezier movement
+//-> use the loop structure like in line 244 ( because setTimeout doesn't work as expected)
+//additional idea: rotate gridobjects around a separate axis per specimen in real 3d, slowly
+//->just move the corner points and then harp again (with just the x and y, z is only for rotation) 
+			
+			ListCirc.prototype.paintStepGroup = function() {
+				this.p = this.r;
+				do {
+					this.p.step.resetStep();
+					this.p = this.p.i;
+				} while (this.p != this.r);
+
+//ctx.fillStyle = "white";
+//ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				//for (var i = 0; i < this.p.d.sa; i++) {
+					do {
+				/*
+				ctx.strokeStyle = c.p.d.c;
+				c.p = c.p.i;
+				*/
+				/*
+				var s = Math.floor(Math.random() * (c._length - 1)) + 1;
+				do {
+					c.p = c.p.i;
+				} while (--s);
+				ctx.strokeStyle = c.p.d.c;*/
+				
+				var s = Math.floor(Math.random() * (this.c._length - 1)) + 1;
+				do {
+					this.c.p = this.c.p.i;
+				} while (--s);
+				ctx.strokeStyle = "rgba(" + this.c.p.d.r + "," + this.c.p.d.g + "," + this.c.p.d.b + "," + this.p.style.a + ")";
+			
+//this.setStyle();
+//ctx.strokeStyle = "rgba(" + this.p.style.r + "," + this.p.style.g + "," + this.p.style.b + "," + this.p.style.a + ")";
+				for (var i = 0; i < this.p.d.sa; i++) {
+						this.p.step.paintStep();
+						//this.p = this.p.i;
+				}
+				this.p = this.p.i;
+					} while (this.p != this.r);
+				//}
+			};
+			
+			function Axis() {
+				this.x = 0;
+				this.y = 0;
+				this.z = 0;
+				this.ux = 0;
+				this.uy = 0;
+				this.uz = 0;
+			}
+			
+			ListCirc.prototype.birthAxis = function() {
+				this.add();
+				this.p.d = new Axis();
+				this.setAxis();
+			};
+			
+			ListCirc.prototype.birthAxisGroup = function() {
+				this.p.axis = new ListCirc();
+				this.p.axis.birthAxis();
+			};
+			
+			ListCirc.prototype.seedAxisGroup = function() {
+				this.p = this.r;
+				do {
+					this.birthAxisGroup();
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+
+//(dx || dy || dz) >= 0 !!! -> else call back WHERE???			
+			ListCirc.prototype.setAxis = function() {
+				this.p.d.x = Math.random() * canvas.width;
+				this.p.d.y = Math.random() * canvas.height;
+				this.p.d.z = (Math.random() - 0.5) * 2 * canvas.depth;
+				var dx = Math.random() * canvas.width;
+				var dy = Math.random() * canvas.height;
+				var dz = (Math.random() - 0.5) * 2 * canvas.depth;
+				var s = Math.sqrt(dx * dx + dy * dy + dz * dz);
+				this.p.d.ux = dx / s;
+				this.p.d.uy = dy / s;
+				this.p.d.uz = dz / s;
+			};
+			
+			ListCirc.prototype.birthTransGroup = function(hull, axis) {
+				this.p.trans = new ListCirc();
+				this.p.trans.seedHull(hull._length);
+				this.p.trans.p = this.p.trans.r;
+				hull.p = hull.r;
+				do {
+					this.p.trans.p.d.x = hull.p.d.x - axis.p.d.x;
+					this.p.trans.p.d.y = hull.p.d.y - axis.p.d.y;
+					this.p.trans.p.d.z = hull.p.d.z - axis.p.d.z;
+					this.p.trans.p = this.p.trans.p.i;
+					hull.p = hull.p.i;
+				} while (this.p.trans.p != this.p.trans.r);
+			};
+			
+			ListCirc.prototype.seedTransGroup = function() {
+				this.p = this.r;
+				do {
+					this.birthTransGroup(this.p.hull, this.p.axis);
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+			ListCirc.prototype.axisShift = function() {
+				/*
+				this.p.d.x += (Math.random() - 0.5) * 0.02 * canvas.width;
+				this.p.d.y += (Math.random() - 0.5) * 0.02 * canvas.height;
+				this.p.d.z += (Math.random() - 0.5) * 0.02 * canvas.depth;
+				*/
+				this.p.d.x += (Math.random() - 0.5) * 2;
+				this.p.d.y += (Math.random() - 0.5) * 2;
+				this.p.d.z += (Math.random() - 0.5) * 2;
+				this.p.d.ux += (Math.random() - 0.5) * 0.02;
+				this.p.d.uy += (Math.random() - 0.5) * 0.02;
+				this.p.d.uz += (Math.random() - 0.5) * 0.02;
+			};
+			
+			ListCirc.prototype.transShift = function() {
+				/*
+				this.p.d.x += (Math.random() - 0.5) * 0.02 * canvas.width;
+				this.p.d.y += (Math.random() - 0.5) * 0.02 * canvas.height;
+				this.p.d.z += (Math.random() - 0.5) * 0.02 * canvas.depth;
+				*/
+				this.p.d.x += (Math.random() - 0.5) * 2;
+				this.p.d.y += (Math.random() - 0.5) * 2;
+				this.p.d.z += (Math.random() - 0.5) * 2;
+			};
+			
+			ListCirc.prototype.rotLoop = function() {
+				this.p = this.r;
+				var cA = Math.cos(rad);
+				var sA = Math.sin(rad);
+				do {;
+this.p.axis.axisShift();
+					this.p.trans.rot(this.p.axis.p.d, cA, sA);
+					this.setStepGroup(this.p.trans);
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+			ListCirc.prototype.rot = function(axis, cA, sA) {
+				this.p = this.r;
+				do {
+this.transShift()
+					this.rot3D(axis, cA, sA);
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+			var rad = 0;
+			var rand = 0;
+			var l;
+			
+			ListCirc.prototype.loop = function(test) {
+				rand = Math.floor(Math.random() * 20) + 30;
+				rad += Math.PI * 0.01;
+this.lifeCycle();
+				this.rotLoop();
+				this.paintStepGroup();
+				l = setTimeout(function() {
+					test.loop(test);  
+				}, rand);
+			};
+			
+			//inclusive retranslate
+			ListCirc.prototype.rot3D = function(a, cA, sA) {
+				var s = a.ux * this.p.d.x + a.uy * this.p.d.y + a.uz * this.p.d.z;
+				var t = a.ux * s;
+				this.p.d.xr = cA * (this.p.d.x - t) + sA * (a.uy * this.p.d.z + a.uz * this.p.d.y) + t + a.x;
+				t = a.uy * s;
+				this.p.d.yr = cA * (this.p.d.y - t) + sA * (a.uz * this.p.d.x + a.ux * this.p.d.z) + t + a.y;
+				t = a.uz * s;
+				this.p.d.zr = cA * (this.p.d.z - t) + sA * (a.ux * this.p.d.y + a.uy * this.p.d.x) + t + a.z;
+			};
+			
+			ListCirc.prototype.setStepGroup = function(trans) {		
+				this.p.step.p = this.p.step.r;
+				trans.p = trans.r;
+				do {
+					this.p.step.p.d.x = trans.p.d.xr;
+					this.p.step.p.d.y = trans.p.d.yr;
+					this.p.step.p.d.ux = (trans.p.i.d.xr - trans.p.d.xr) / this.p.d.sa;
+					this.p.step.p.d.uy = (trans.p.i.d.yr - trans.p.d.yr) / this.p.d.sa;
+					this.p.step.p = this.p.step.p.i;
+					trans.p = trans.p.i;
+				} while (this.p.step.p != this.p.step.r);
+			};
+			
+			function Color() {
+				this.r = 0;
+				this.g = 0;
+				this.b = 0;
+			}
+			
+			ListCirc.prototype.birthColorGroup = function() {
+				for (var i = 0; i < colorA; i++) {
+					this.add();
+					this.p.d = new Color();
+					this.setColor();
+				}
+			};
+			
+			ListCirc.prototype.birthColor = function() {
+				this.add();
+				this.p.d = new Color();
+				this.setColor();
+			};
+			
+			ListCirc.prototype.seedColorGroup = function() {
+				this.c = new ListCirc();
+				this.c.birthColorGroup();
+			};
+			
+			ListCirc.prototype.setColor = function() {
+				var a = Math.random();
+				if (a > 0.8) {
+					this.p.d.r = 174;
+					this.p.d.g = 62;
+					this.p.d.b = 22;
+				} else if (a > 0.6) {
+					this.p.d.r = 255;
+					this.p.d.g = 6;
+					this.p.d.b = 0;
+				} else if (a > 0.4) {
+					this.p.d.r = 114;
+					this.p.d.g = 114;
+					this.p.d.b = 114;
+				} else if (a > 0.2) {
+					this.p.d.r = 0;
+					this.p.d.g = 0;
+					this.p.d.b = 0;
+				} else {
+					this.p.d.r = 255;
+					this.p.d.g = 255;
+					this.p.d.b = 255;
+				}
+				this.p.d.r += Math.floor((Math.random() - 0.5) * 20);
+				if (this.p.d.r > 255) {
+					this.p.d.r = 510 - this.p.d.r;
+				} else {
+					this.p.d.r = Math.abs(this.p.d.r);
+				}
+				this.p.d.g += Math.floor((Math.random() - 0.5) * 20);
+				if (this.p.d.g > 255) {
+					this.p.d.g = 510 - this.p.d.g;
+				} else {
+					this.p.d.g = Math.abs(this.p.d.g);
+				}
+				this.p.d.b += Math.floor((Math.random() - 0.5) * 20);
+				if (this.p.d.b > 255) {
+					this.p.d.b = 510 - this.p.d.b;
+				} else {
+					this.p.d.b = Math.abs(this.p.d.b);
+				}
+			};
+			
+			function GroupA() {
+				this.ga = Math.floor(Math.random() * 2 * groupA + 1);
+			}
+			
+			function Style() {
+				this.r = 0;
+				this.g = 0;
+				this.b = 0;
+				this.a = 0;
+			}
+			
+//TODO PLUS
+//its the same like the initial g start sequence
+			ListCirc.prototype.addGroup = function() {
+				this.birthHullGroup();
+				this.birthStepGroup(this.p.hull);
+				this.birthAxisGroup();
+				this.birthTransGroup(this.p.hull, this.p.axis);
+			};
+
+			ListCirc.prototype.delGroup = function() {
+				this.p = this.r;
+				do {
+					if ((this.p.life.f == 2) && (Math.random() > 0.2)) {
+						this.del();
+					}
+					if (this._length) {
+						this.p = this.p.i;
+					} else {
+						this.addGroup();
+					}
+				} while (this.p != this.r);
+			};
+			
+			function Life() {
+				this.f = 0;
+			}
+			
+			ListCirc.prototype.lifeCycle = function() {
+				if (Math.random() > 0.95) {
+					this.c.del();
+					if (this.c._length == 0) {
+						this.c.birthColor();
+					}
+				}
+				if (Math.random() > 0.95) {
+					this.c.birthColor();
+				}
+				
+				if (Math.random() > 0.995) {
+					this.addGroup();
+				}
+				this.delGroup();
+				this.p = this.r;
+				do {
+					if (this.p.life.f == 0) {
+						if (this.p.style.a < 0.15) {
+							this.p.style.a += Math.random() * 0.007;							
+						} else {
+							this.p.life.f = 1;
+						}
+					}
+					if (this.p.life.f == 1) {
+						if (this.p.style.a > 0.2) {
+							this.p.life.f = 2;
+						} else {
+							this.p.style.a += (Math.random() - 0.5) * 0.014;
+						}
+					}
+					if (this.p.life.f == 2) {
+						this.p.style.a -= Math.random() * 0.007;
+					}
+					this.p = this.p.i;
+				} while (this.p != this.r);
+			};
+			
+//TODO
+//shorten or extend entities - more or less hull points
+
+//TODO PLUS
+//clean up functions to core functions (all the seeds and adds and so on)
+//offscreencanvas???
+
+			
+			var canvas = document.getElementById("canvas");
+			var ctx = canvas.getContext('2d');
+			canvas.height = window.innerHeight - 5;
+			canvas.width = document.body.clientWidth;
+			canvas.depth = (canvas.width + canvas.height) * 0.5;
+			
+			ctx.lineWidth = 1;
+			
+			var state = false;
+			
+			document.onclick = function() { 
+				if (state) {
+					g.loop(g);
+					state = false;
+				} else {
+					clearTimeout(l);
+					state = true;
+				}
+			};
+			
+			/*
+			var color = ["black", "red", "white", "brown", "gray"];
+			var c = new ListCirc();
+			c.seedColor();
+			*/
+			
+			var hullA = 6;
+			var groupA = 3;
+			var stepA = 100;
+			
+var colorA = 5;
+			
+			var g = new ListCirc();
+			g.d = new GroupA();
+			g.seedHullGroup();
+			g.seedStepGroup();
+			g.seedAxisGroup();
+			g.seedTransGroup();
+			g.seedColorGroup();
+			g.loop(g);
+
+		</script>
+	</body>
+</html>
