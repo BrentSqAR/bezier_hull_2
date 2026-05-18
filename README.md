@@ -1,2 +1,2 @@
 Pierre Étienne Bézier
-![img](/assets/a.webp)
+![img](/a.webp)
